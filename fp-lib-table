@@ -1,0 +1,12 @@
+(fp_lib_table
+  (lib (name Converter_DCDC-ML)(type KiCad)(uri ${KIMLMOD}/Converter_DCDC-ML)(options "")(descr ""))
+  (lib (name Crystal-ML)(type KiCad)(uri ${KIMLMOD}/Crystal-ML.pretty)(options "")(descr ""))
+  (lib (name Diode_SMD-ML)(type KiCad)(uri ${KIMLMOD}/Diode_SMD-ML.pretty)(options "")(descr ""))
+  (lib (name Package_SO-ML)(type KiCad)(uri ${KIMLMOD}/Package_SO-ML.pretty)(options "")(descr ""))
+  (lib (name Package_TO_SOT_SMD-ML)(type KiCad)(uri ${KIMLMOD}/Package_TO_SOT_SMD-ML)(options "")(descr ""))
+  (lib (name RF_Module-ML)(type KiCad)(uri ${KIMLMOD}/RF_Module-ML)(options "")(descr ""))
+  (lib (name Inductor_SMD-ML)(type KiCad)(uri ${KIMLMOD}/Inductor_SMD-ML.pretty)(options "")(descr ""))
+  (lib (name MountingHole-ML)(type KiCad)(uri ${KIMLMOD}/MountingHole-ML.pretty)(options "")(descr ""))
+  (lib (name Package_DFN_QFN-ML)(type KiCad)(uri ${KIMLMOD}/Package_DFN_QFN-ML.pretty)(options "")(descr ""))
+  (lib (name Connector_TE-Connectivity-ML)(type KiCad)(uri ${KIMLMOD}/Connector_TE-Connectivity-ML.pretty)(options "")(descr ""))
+)

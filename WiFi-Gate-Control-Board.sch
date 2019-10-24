@@ -427,7 +427,7 @@ F 6 "Mouser" H 2500 2100 60  0001 C CNN "Vendor"
 F 7 "77-VJ0603Y102KXAAC31" H 2500 2100 60  0001 C CNN "Vendor Part Number"
 F 8 "50V" H 2600 2200 50  0000 L CNN "Voltage"
 F 9 "10%" H 2500 2100 60  0001 C CNN "Tolerance"
-F 10 "CAP, 0603, 1000pF, 10%, X7R, 10V" H 2500 2100 50  0001 C CNN "Description"
+F 10 "CAP, 0603, 1nF, 10%, X7R, 10V" H 2500 2100 50  0001 C CNN "Description"
 	1    2500 2100
 	-1   0    0    1   
 $EndComp
@@ -760,7 +760,7 @@ F 6 "Mouser" H 3000 2100 60  0001 C CNN "Vendor"
 F 7 "77-VJ0603Y102KXAAC31" H 3000 2100 60  0001 C CNN "Vendor Part Number"
 F 8 "50V" H 3100 2200 50  0000 L CNN "Voltage"
 F 9 "10%" H 3000 2100 60  0001 C CNN "Tolerance"
-F 10 "CAP, 0603, 1000pF, 10%, X7R, 10V" H 3000 2100 50  0001 C CNN "Description"
+F 10 "CAP, 0603, 1nF, 10%, X7R, 10V" H 3000 2100 50  0001 C CNN "Description"
 	1    3000 2100
 	1    0    0    1   
 $EndComp
@@ -778,7 +778,7 @@ F 6 "Mouser" H 1550 2100 60  0001 C CNN "Vendor"
 F 7 "77-VJ0603Y102KXAAC31" H 1550 2100 60  0001 C CNN "Vendor Part Number"
 F 8 "50V" H 1650 2200 50  0000 L CNN "Voltage"
 F 9 "10%" H 1550 2100 60  0001 C CNN "Tolerance"
-F 10 "CAP, 0603, 1000pF, 10%, X7R, 10V" H 1550 2100 50  0001 C CNN "Description"
+F 10 "CAP, 0603, 1nF, 10%, X7R, 10V" H 1550 2100 50  0001 C CNN "Description"
 	1    1550 2100
 	-1   0    0    1   
 $EndComp
@@ -1103,7 +1103,7 @@ F 4 "Nexperia" H 2450 6000 50  0001 C CNN "Manufacturer"
 F 5 "PRTR5V0U2X,215" H 2450 6000 50  0001 C CNN "Part Number"
 F 6 "Mouser" H 2450 6000 50  0001 C CNN "Vendor"
 F 7 "771-PRTR5V0U2X-T/R" H 2450 6000 50  0001 C CNN "Vendor Part Number"
-F 8 "TVS, SOT23, ESD Protection, USB" H 2450 6000 50  0001 C CNN "Description"
+F 8 "TVS, SOT143, ESD Protection, USB" H 2450 6000 50  0001 C CNN "Description"
 	1    2450 6000
 	1    0    0    -1  
 $EndComp
@@ -1209,7 +1209,7 @@ F 6 "Mouser" H 2050 2100 60  0001 C CNN "Vendor"
 F 7 "77-VJ0603Y102KXAAC31" H 2050 2100 60  0001 C CNN "Vendor Part Number"
 F 8 "50V" H 2150 2200 50  0000 L CNN "Voltage"
 F 9 "10%" H 2050 2100 60  0001 C CNN "Tolerance"
-F 10 "CAP, 0603, 1000pF, 10%, X7R, 10V" H 2050 2100 50  0001 C CNN "Description"
+F 10 "CAP, 0603, 1nF, 10%, X7R, 10V" H 2050 2100 50  0001 C CNN "Description"
 	1    2050 2100
 	-1   0    0    1   
 $EndComp
@@ -1553,7 +1553,7 @@ F 6 "Mouser" H 4450 2100 60  0001 C CNN "Vendor"
 F 7 "77-VJ0603Y332JXQPBC" H 4450 2100 60  0001 C CNN "Vendor Part Number"
 F 8 "10V" H 4550 2000 50  0000 L CNN "Voltage"
 F 9 "5%" H 4450 2100 60  0001 C CNN "Tolerance"
-F 10 "CAP, 0603, 3300pF, 5%, X7R, 10V" H 4450 2100 50  0001 C CNN "Description"
+F 10 "CAP, 0603, 3.3nF, 5%, X7R, 10V" H 4450 2100 50  0001 C CNN "Description"
 	1    4450 2100
 	-1   0    0    -1  
 $EndComp
@@ -2309,10 +2309,6 @@ F1 "WiFi-Gate-Control-Board-Motor.sch" 100
 $EndSheet
 Text Notes 650  9250 0    150  ~ 0
 Notes
-Text Notes 650  9900 0    100  Italic 0
-3.
-Text Notes 850  9900 0    100  Italic 0
-All LEDs are normally off. 
 Wire Bus Line
 	6900 4050 6900 8950
 Wire Bus Line

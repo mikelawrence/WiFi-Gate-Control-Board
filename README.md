@@ -12,7 +12,10 @@ For Bill of Materials generation I use my version of [KiBoM](https://github.com/
 
 ## Status
 
-* Design is still in the early design phase.
+* Rev 1.0 PCB has been ordered from PCBWay and has NOT BEEN TESTED.
+  * You can order parts from Mouser using this [shared BOM](https://www.mouser.com/ProjectManager/ProjectDetail.aspx?AccessID=1331b48340).
+  * You can order the PCB from PCBWay using this [link](https://oshpark.com/shared_projects/meYar6Ji).
+
 
 ## Board Preview
 

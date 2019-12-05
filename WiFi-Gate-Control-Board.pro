@@ -1,6 +1,6 @@
-update=Monday, October 21, 2019 at 05:58:13 PM
+update=Sunday, November 24, 2019 at 04:04:14 PM
 version=1
-last_client=eeschema
+last_client=kicad
 [cvpcb]
 version=1
 NetIExt=net
@@ -9,6 +9,16 @@ version=1
 [eeschema]
 version=1
 LibDir=
+[schematic_editor]
+version=1
+PageLayoutDescrFile=
+PlotDirectoryName=./
+SubpartIdSeparator=0
+SubpartFirstId=65
+NetFmtName=Pcbnew
+SpiceAjustPassiveValues=0
+LabSize=60
+ERC_TestSimilarLabels=1
 [pcbnew]
 version=1
 PageLayoutDescrFile=C:/xesscorp/KiCad/page_layouts/title_block_only.kicad_wks
@@ -27,14 +37,15 @@ MinMicroViaDrill=0
 MinHoleToHole=0.254
 TrackWidth1=0.1524
 TrackWidth2=0.254
-TrackWidth3=0.4318
-TrackWidth4=0.508
-TrackWidth5=0.635
-TrackWidth6=0.762
-TrackWidth7=1.27
-TrackWidth8=1.905
-TrackWidth9=2.54
-TrackWidth10=3.81
+TrackWidth3=0.381
+TrackWidth4=0.44958
+TrackWidth5=0.508
+TrackWidth6=0.635
+TrackWidth7=0.762
+TrackWidth8=1.27
+TrackWidth9=1.905
+TrackWidth10=2.54
+TrackWidth11=3.81
 ViaDiameter1=0.508
 ViaDrill1=0.254
 ViaDiameter2=0.508
@@ -261,13 +272,3 @@ uViaDrill=0.381
 dPairWidth=0.254
 dPairGap=0.254
 dPairViaGap=0.25
-[schematic_editor]
-version=1
-PageLayoutDescrFile=
-PlotDirectoryName=./
-SubpartIdSeparator=0
-SubpartFirstId=65
-NetFmtName=Pcbnew
-SpiceAjustPassiveValues=0
-LabSize=60
-ERC_TestSimilarLabels=1

@@ -16,3 +16,4 @@ These models are not created by Mike Lawrence and have their own respective lice
 * `RSM0032B.stp` VQFN-32 package from [Texas Instruments](http://www.ti.com/product/LP5024/pinout-quality)
 * `SMA_Jack_panel mount_RG174.STEP` SMA Panel Mount RG-174 [GrabCAD](https://grabcad.com/library/sma-female-panel-mount-rg174-1)
 * `User Library-ASMB-MTB0-0A3A2.STEP` Avago SMD LED [3D Content Central](https://www.3dcontentcentral.com/Download-Model.aspx?catalogid=171&id=498156)
+* `User Library-CAPAER_D160_L165_P075_W008X030` Radial 16x16 capacitor [3D Content Central](https://www.3dcontentcentral.com/secure/download-model.aspx?catalogid=171&id=793116)

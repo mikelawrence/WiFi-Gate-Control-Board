@@ -36,7 +36,19 @@ For Bill of Materials generation I use my version of [KiBoM](https://github.com/
 
 ## Design
 
+Intended to replace a US Automatic Patriot Board, this board can directly drive a single gate actuator in both directions. Multiple generic inputs are provided on board to make connection to existing standard gate functionality (open, close, pushbutton...) easy. By providing a WiFi connection to a MQTT server this board can be controlled via standard home automation software (Home Assistant).
+
 Board size is 5.50" X 6.25". This board is smaller than the standard size of a US Automatic Patriot Board but matches existing spacer locations.
+
+### Input Power
+
+There are two identical power supplies. U1 powers most of the board via 3.3V. U1 power source is either main power (J12) or the USB connector (J1) so the microprocessor can be programmed on the bench without main power. All LEDs on the board are powered by a separate power supply (U21) which can be turned off by the microprocessor.
+
+### Inputs
+
+There are 12 identical physical inputs on this board. Each input can support Normally Open, Normally Closed, and 10k Monitored Normally Open inputs. A Normally Open input is a dry contact that is open when inactive and closed (shorted) when active. A Normally Closed input is the opposite; closed (shorted) when inactive and open when active. A 10k Monitored input is a Normally Open dry contact with a 8k to 10k resistor across the contacts and is normally used for safety inputs. The resistor allows the connections to the contact to be monitored while inactive. The most current efficient input is the Normally Open input which requires no additional current when inactive. The 10k Monitored input requires an additional 49μA and the Normally Closed input requires a 59μA per input while inactive.
+
+Each input is actually a pair of connections: input and ground (negative terminal of battery). This means the ground side is the same (connected) on all inputs and external wiring must take this into account. The 12 inputs are described below...
 
 | Terminal | Name  | Conn  | Description                            |
 | :---:    | :---: | :---: | :---                                   |
@@ -60,20 +72,12 @@ Board size is 5.50" X 6.25". This board is smaller than the standard size of a U
 | 18       | GND   | J6    | Common Ground                          |
 | 19       | IN10  | J6    | Input 10                               |
 | 20       | GND   | J6    | Common Ground                          |
-| 21       | IN11  | J7    | Input 11                               |
-| 22       | GND   | J7    | Common Ground                          |
+| 21       | IN11  | J7    | +12V power, Switched PhotoEye power    |
+| 22       | GND   | J7    | Input 11                               |
 | 23       | IN12  | J7    | Input 12                               |
 | 24       | GND   | J7    | Common Ground                          |
 
-### Input Power
-
-### Inputs
-
-There are 12 identical physical inputs on this board. Each input can support Normally Open, Normally Closed, and 10k Monitored Normally Open inputs. A Normally Open input is a dry contact that is open when inactive and closed (shorted) when active. A Normally Closed input is the opposite; closed (shorted) when inactive and open when active. A 10k Monitored input is a Normally Open dry contact with a 8k to 10k resistor across the contacts and is normally used for safety inputs. The resistor allows the connections to the contact to be monitored while inactive. The most current efficient input is the Normally Open input which requires no additional current when inactive. The 10k Monitored input requires an additional 49μA and the Normally Closed input requires a 59μA per input while inactive.
-
-Each input is actually a pair of connections: input and ground (negative terminal of battery). This means the ground side is the same (connected) on all inputs and external wiring must take this into account.
-
-Each input can be configured for different types in software as shown in the table below.
+Each input can be configured for different gate input types in software as shown in the table below.
 
 | Input          | Other Names                  | Type     | Monitored | Action |
 | :---           | :---                         | :---:    | :---:     | :---   |
@@ -90,6 +94,10 @@ Each input can be configured for different types in software as shown in the tab
 | Input 2        |                              | NO or NC | Can be    | Has no gate function.
 
 ### Outputs
+
+There are 4 switched power outputs on the board. J7 is used for PhotoEye connections and thus the +12V is switched on only during gate motion. The Alarm +AL is switched to +12V when a fault is active. The +12V on J10 and J11 output connectors are switched based on output settings.
+
+There are several to be defined output settings here...
 
 ### SAMD ARM Processor and WiFi Module
 

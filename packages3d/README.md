@@ -4,6 +4,7 @@ These models are not created by Mike Lawrence and have their own respective lice
 
 * `430476085716 (rev1).stp` Push Button Switch from [Wurth](https://katalog.we-online.de/en/em/TATV_12X12_THT_WASHABLE_4304x60xx7x6/430476085716)
 * `c-350212-1-w-3d.stp` Connector from [TE Connectivity](https://www.te.com/usa-en/product-350212-1.html?te_bu=Dat&te_type=other&te_campaign=eda_usa_sg-snap-3d&elqCampaignId=20145#pdp-documents-tab)
+* `FTSH-105-01-L-DV-K.stp` Micro Terminal Strip [Samtec](https://www.samtec.com/products/ftsh#)
 * `Mini car fuse.stp` Minifuse from [GrabCAD](https://grabcad.com/library/mini-car-fuse-1)
 * `mf-sm075.stp` PTC Fuse from [Bournes](https://www.bourns.com/resources/design-tools/engineering-files-list?folder=mfsm)
 * `mf-sm150.stp` PTC Fuse from [Bournes](https://www.bourns.com/resources/design-tools/engineering-files-list?folder=mfsm)

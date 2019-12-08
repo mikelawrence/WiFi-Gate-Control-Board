@@ -3,3 +3,4 @@
 *.kicad_pcb-bak
 fp-info-cache
 WiFi-Gate-Control-Board.xml
+code/build/*

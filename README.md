@@ -12,20 +12,15 @@ For Bill of Materials generation I use my version of [KiBoM](https://github.com/
 
 ## Status
 
-* Rev 1.1 PCB has been ordered from PCBWay.
-  * Added missing Reference Designators to top Silkscreen.
-  * Connected reset input to 3.3V on TCA6424A and TCA6408A. Mistake was assuming reset input had builtin pullup.
-  * Added Schottky Diode to input of LED Power Supply.
-  * Replaced 1000uF main power capacitor with two 470uF capacitors.
-  * Replaced DS18B20 1-Wire temperature sensor with TMP100 I2C temperature sensor.
-  * Increased all LED currents to 25mA.
-  * Removed U26 inverter and connected U3 IN pin directly to processor. Now able to measure unloaded offset current.
-  * You can order parts from Mouser using this [shared BOM](https://www.mouser.com/ProjectManager/ProjectDetail.aspx?AccessID=1331b48340).
+* Rev 1.1 PCB was built by and received from PCBWay.
+  * This is a 4 layer PCB using 2 oz. copper for all layers and is relatively expensive.
+  * Board has been assembled with no problems.
+  * Motor interface still needs to be tested everything else is good.
+  * You can order PCB from [PCBWay](https://www.pcbway.com/project/shareproject/WiFi_Gate_Control_Board_Rev_1_1.html).
+  * You can order parts from Mouser using this [shared BOM](https://www.mouser.com/ProjectManager/ProjectDetail.aspx?AccessID=5c81251866).
 
-* Rev 1.0 PCB was built by and received from PCBWay. Testing has been finished.
-  * Debug interface was able to program bootloader.
-  * SAMD processor and ATWINC1500 have been programmed and WiFi connectivity verified.
-  * DS18B20 temperature sensor verified.
+* Rev 1.0 PCB was built by and received from PCBWay. Testing is complete.
+  * PCBWay built the board.
   * I2C interface to TCA6424A, TCA6408A and LPC5024 verified. Reset not connected error found and corrected in Rev 1.1.
   * 12VDC input and reverse polarity protection verified.
   * LED circuitry and power supply verified.
@@ -33,7 +28,7 @@ For Bill of Materials generation I use my version of [KiBoM](https://github.com/
   * All +12V switched outputs verified. Overload tested also.
   * All 2 Normally Open outputs tested.
   * Full-bridge motor control has been tested up to 30A. Far more than needed.
-  * Motor current sensing verified.
+  * Motor current sensing verified. Removed U26 and connected IN input for each half-bridge directly to processor. Needed to set both half-bridges to active low so MIS offset could be measured unloaded.
 
 ## Board Preview
 
@@ -41,7 +36,7 @@ For Bill of Materials generation I use my version of [KiBoM](https://github.com/
 
 ## Design
 
-Board size is 5.50" X 6.25". This board is smaller than the standard size of a US Automatic Patriot Board but should match existing spacer locations.
+Board size is 5.50" X 6.25". This board is smaller than the standard size of a US Automatic Patriot Board but matches existing spacer locations.
 
 | Terminal | Name  | Conn  | Description                            |
 | :---:    | :---: | :---: | :---                                   |

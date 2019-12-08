@@ -295,10 +295,10 @@ F 0 "J2" H 2600 7475 50  0000 C CNN
 F 1 "Cortex Debug" H 2600 7476 50  0001 C CNN
 F 2 "Connector_PinHeader_1.27mm:PinHeader_2x05_P1.27mm_Vertical_SMD" H 2550 7150 50  0001 C CNN
 F 3 "https://www.mouser.com/datasheet/2/18/20021121-1362884.pdf" H 2550 7150 50  0001 C CNN
-F 4 "Amphenol FCI" H 2550 7150 50  0001 C CNN "Manufacturer"
-F 5 "202112100010C4LF" H 2550 7150 50  0001 C CNN "Part Number"
+F 4 "Samtec" H 2550 7150 50  0001 C CNN "Manufacturer"
+F 5 "FTSH-105-01-L-DV-K" H 2550 7150 50  0001 C CNN "Part Number"
 F 6 "Mouser" H 2550 7150 50  0001 C CNN "Vendor"
-F 7 "649-202112100010C4LF" H 2550 7150 50  0001 C CNN "Vendor Part Number"
+F 7 "200-FTSH10501LDVK" H 2550 7150 50  0001 C CNN "Vendor Part Number"
 F 8 "CON, SMD, 1.27mm Header, Dual Row, Vertical, 10 Pos" H 2550 7150 50  0001 C CNN "Description"
 	1    2550 7150
 	1    0    0    -1  

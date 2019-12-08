@@ -19,7 +19,7 @@ Quantity,References,Value,Description,Manufacturer,Part Number,Vendor,Vendor Par
 2,F1 F2,0.75A,"Fuse, PTC Resettable, 0.75A, SMT",Bourns,MFSM075-2,Mouser,652-MFSM075-2
 1,F3,15A,"Fuse, Mini Fuse Holder",Keystone,3568,Mouser,534-3568
 1,J1,USB_B_Micro,"CON, THT, Micro USB 2.0 Type AB, Vertical",Wurth Electronics,614105150721,Mouser,710-614105150621
-1,J2,Cortex Debug,"CON, SMD, 1.27mm Header, Dual Row, Vertical, 10 Pos",Amphenol FCI,202112100010C4LF,Mouser,649-202112100010C4LF
+1,J2,Cortex Debug,"CON, SMD, 1.27mm Header, Dual Row, Vertical, 10 Pos",Samtec,FTSH-105-01-L-DV-K,Mouser,200-FTSH10501LDVK
 8,J3 J4 J5 J6 J7 J8 J10 J11,Screw Header 4 Pos,"CON, THT, 5.08mm Pluggable Terminal Header, 4 Pos",Phoenix Contact,1755752,Mouser,651-1755752
 8,,Screw Header 4 Pos,"CON, THT, 5.08mm Pluggable Terminal Plug, 4 Pos",Phoenix Contact,1757035,Mouser,651-1757035
 1,J9,Screw Header 2 Pos,"CON, THT, 5.08mm Pluggable Terminal Header, 2 Pos",Phoenix Contact,1755736,Mouser,651-1755736

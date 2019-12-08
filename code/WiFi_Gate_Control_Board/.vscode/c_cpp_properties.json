@@ -1,0 +1,33 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "/Users/mike/Library/Arduino15/packages/arduino/hardware/samd/1.8.4/**",
+                "/Users/mike/Library/Arduino15/packages/arduino/tools/CMSIS-Atmel/1.2.0/CMSIS/Device/Atmel",
+                "/Users/mike/Documents/Arduino/libraries/**",
+                "/Users/mike/Library/Arduino15/packages/arduino/tools/**"
+            ],
+            "forcedInclude": [
+                "/Users/mike/Library/Arduino15/packages/arduino/hardware/samd/1.8.4/cores/arduino/Arduino.h"
+            ],
+            "macFrameworkPath": [
+                "/System/Library/Frameworks",
+                "/Library/Frameworks"
+            ],
+            "intelliSenseMode": "clang-x64",
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "defines": [
+                "F_CPU=48000000L",
+                "ARDUINO_ARCH_SAMD",
+                "ARDUINO_SAMD_MKR1000",
+                "USE_ARDUINO_MKR_PIN_LAYOUT",
+                "__SAMD21G18A__",
+                "USBCON"
+            ]
+        }
+    ],
+    "version": 4
+}

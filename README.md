@@ -44,7 +44,7 @@ Board size is 5.50" X 6.25". This board is smaller than the standard size of a U
 
 The main input connector (J12) provides connections to both the battery and motor. This connector is used by both US Automatic and Apollo gate openers. See pinout below.
 
-<img src="drawings/Main_Connector_Pinout.png" width="431">
+<img src="meta/Main_Connector_Pinout.png" width="431">
 
 A 15 Amp fuse protects the entire board. DC input range is 12V nominal (5V - 17V). Idle input power consumption is pretty variable running from 69mW to 1.38W with an average around 179mW. Peak power is during WiFi transmit.
 
@@ -177,7 +177,7 @@ Update the ATWINC1500 module by selecting "WiFi101 Firmware Updater".
 
 <img src="meta/WiFi101_Firmware_Updater_2.png" width="605">
 
-Select the latest WINC1501 firmware and click the "Update Firmware" button.
+Select the latest WINC1501 Model B firmware and click the "Update Firmware" button.
 
 <img src="meta/WiFi101_Firmware_Updater_3.png" width="662">
 
@@ -187,5 +187,5 @@ This project also supports Visual Studio Code. Visual Studio Code supports build
 
 ## Acknowledgments
 
-[Arduino](www.arduino.cc) kindly develops open source hardware and software which makes writing software for this board and especially the WiFi module easy.
-[Visual Studio Code](https://code.visualstudio.com/) from Microsoft is a great alternative to the Arduino IDE.
+* [Arduino](www.arduino.cc) kindly develops open source hardware and software which makes writing software for this board and especially the WiFi module easy.
+* [Visual Studio Code](https://code.visualstudio.com/) from Microsoft is a great alternative to the Arduino IDE.

@@ -42,21 +42,25 @@ Board size is 5.50" X 6.25". This board is smaller than the standard size of a U
 
 ### Input Power
 
-There are two identical power supplies. U1 powers most of the board via 3.3V. U1 power source is either main power (J12) or the USB connector (J1) so the microprocessor can be programmed on the bench without main power. All LEDs on the board are powered by a separate power supply (U21) which can be turned off by the microprocessor.
+The main input connector (J12) provides connections to both the battery and motor. This connector is used by both US Automatic and Apollo gate openers. See pinout below.
 
-### Inputs
+<img src="drawings/Main_Connector_Pinout.png" width="431">
 
-There are 12 identical physical inputs on this board. Each input can support Normally Open, Normally Closed, and 10k Monitored Normally Open inputs. A Normally Open input is a dry contact that is open when inactive and closed (shorted) when active. A Normally Closed input is the opposite; closed (shorted) when inactive and open when active. A 10k Monitored input is a Normally Open dry contact with a 8k to 10k resistor across the contacts and is normally used for safety inputs. The resistor allows the connections to the contact to be monitored while inactive. The most current efficient input is the Normally Open input which requires no additional current when inactive. The 10k Monitored input requires an additional 49μA and the Normally Closed input requires a 59μA per input while inactive.
+A 15 Amp fuse protects the entire board. DC input range is 12V nominal (5V - 17V). Idle input power consumption is pretty variable running from 69mW to 1.38W with an average around 179mW. Peak power is during WiFi transmit.
 
-Each input is actually a pair of connections: input and ground (negative terminal of battery). This means the ground side is the same (connected) on all inputs and external wiring must take this into account. The 12 inputs are described below...
+There are two identical power supplies. U1 powers most of the board via 3.3V. U1's power source is either main power (J12) or the USB connector (J1) so the microprocessor can be programmed on the bench without main power. All LEDs on the board are powered by a separate power supply (U21) which can be turned off by the microprocessor. This substantially reduces power consumption
+
+### Board connections
+
+There are nine screw terminal blocks with removable headers on the board used to connect with all gate functions.
 
 | Terminal | Name  | Conn  | Description                            |
 | :---:    | :---: | :---: | :---                                   |
-| 01       | +12V  | J3    | +12V power, Always on, PTC fused 0.75A |
+| 01       | +12V  | J3    | +12V power, Always on, fused 0.75A     |
 | 02       | IN1   | J3    | Input 1 (Radio)                        |
 | 03       | IN2   | J3    | Input 2                                |
 | 04       | GND   | J3    | Common Ground                          |
-| 05       | +12V  | J5    | +12V power, Always on, PTC fused 0.75A |
+| 05       | +12V  | J5    | +12V power, Always on, fused 0.75A     |
 | 06       | IN3   | J5    | Input 3                                |
 | 07       | IN4   | J5    | Input 4                                |
 | 08       | GND   | J5    | Common Ground                          |
@@ -76,8 +80,22 @@ Each input is actually a pair of connections: input and ground (negative termina
 | 22       | GND   | J7    | Input 11                               |
 | 23       | IN12  | J7    | Input 12                               |
 | 24       | GND   | J7    | Common Ground                          |
+| 25       | +AL   | J9    | +12V power, Switched Alarm power       |
+| 26       | GND   | J9    | Common Ground                          |
+| 27       | OUT1  | J7    | Output 1, NO switch Output 1           |
+| 28       | COM1  | J7    | Common 1, NO switch Output 1           |
+| 29       | GND   | J9    | Common Ground                          |
+| 30       | +12V  | J9    | +12V power, Switched Output 1 power    |
+| 31       | OUT2  | J7    | Output 2, NO switch Output 2           |
+| 32       | COM2  | J7    | Common 2, NO switch Output 2           |
+| 33       | GND   | J9    | Common Ground                          |
+| 34       | +12V  | J9    | +12V power, Switched Output 2 power    |
 
-Each input can be configured for different gate input types in software as shown in the table below.
+### Inputs
+
+There are 12 identical physical inputs on this board. Each input can support Normally Open, Normally Closed, and 10k Monitored Normally Open inputs. A Normally Open input is a dry contact that is open when inactive and closed (shorted) when active. A Normally Closed input is the opposite; closed (shorted) when inactive and open when active. A 10k Monitored input is a Normally Open dry contact with a 8k to 10k resistor across the contacts and is normally used for safety inputs. The resistor allows the connections to the contact to be monitored while inactive. The most current efficient input is the Normally Open input which requires no additional current when inactive. The 10k Monitored input requires an additional 49μA and the Normally Closed input requires a 59μA per input while inactive.
+
+Each input is actually a pair of connections: input and ground (negative terminal of battery). This means the ground side is the same (connected) on all inputs and external wiring must take this into account. Each input can be configured for different gate input types in software as shown in the table below.
 
 | Input          | Other Names                  | Type     | Monitored | Action |
 | :---           | :---                         | :---:    | :---:     | :---   |
@@ -85,19 +103,21 @@ Each input can be configured for different gate input types in software as shown
 | Close          |                              | NO       | No        | While active, close gate and holds it closed. |
 | Open           | Exit, Free Exit              | NO       | No        | While active, opens gate and holds it open. |
 | Stop           |                              | NC       | No        | While active, stops the gate and holds it in position. |
-| Open PhotoEye  |                              | NO or NC | Can be    | While active, stops an opening gate or prevents gate from opening. |
-| Close PhotoEye |                              | NO or NC | Can be    | While active, reverses a closing gate to full open and holds it open. |
-| Safety Edge    |                              | NO       | Can be    | When activated, stops and momentarily reverses a moving gate. |
-| Safety Loop    | Reverse Loop                 | NO       | Can be    | While active, reverses a closing gate to full open and holds it open. |
-| Shadow Loop    | Center Loop, Under Gate Loop | NO       | Can be    | While active, prevents a closed gate from opening, prevents an open gate from closing, or reverses a closing gate to fully open and holds it open. |
-| Input 1        |                              | NO or NC | Can be    | Has no gate function. Can be used to monitor say a mailbox door.
-| Input 2        |                              | NO or NC | Can be    | Has no gate function.
+| Open PhotoEye  |                              | NO or NC | Yes       | While active, stops an opening gate or prevents gate from opening. |
+| Close PhotoEye |                              | NO or NC | Yes       | While active, reverses a closing gate to full open and holds it open. |
+| Safety Edge    |                              | NO       | Yes       | When activated, stops and momentarily reverses a moving gate. |
+| Safety Loop    | Reverse Loop                 | NO       | Yes       | While active, reverses a closing gate to full open and holds it open. |
+| Shadow Loop    | Center Loop, Under Gate Loop | NO       | Yes       | While active, prevents a closed gate from opening, prevents an open gate from closing, or reverses a closing gate to fully open and holds it open. |
+| Input 1        |                              | NO or NC | Yes       | Has no gate function. Can be used to monitor say a mailbox door.
+| Input 2        |                              | NO or NC | Yes       | Has no gate function.
+
+Look at [Safety Edge Circuit calculations](drawings/Safety Edge Circuit calculations.pdf) for an explanation of how the input circuits with 10k monitoring work.
 
 ### Outputs
 
-There are 4 switched power outputs on the board. J7 is used for PhotoEye connections and thus the +12V is switched on only during gate motion. The Alarm +AL is switched to +12V when a fault is active. The +12V on J10 and J11 output connectors are switched based on output settings.
+There are 4 switched power outputs on the board. J7 is used for PhotoEye connections and thus the +12V is switched on only during gate motion. The Alarm +AL is switched to +12V when alarm is active. The +12V on J10 and J11 output connectors are switched based on output settings.
 
-There are several to be defined output settings here...
+There are several to be defined output settings here.
 
 ### SAMD ARM Processor and WiFi Module
 
@@ -126,9 +146,10 @@ Type in "mqtt" in the filter edit and scroll down until you see "MQTT by Joel Ga
 Once "MQTT" is installed repeat the install for the following libraries.
 
 * WiFi101 by Arduino
-* WiFiOTA by Arduino
-* OneWire by Paul Stoffregen and many others
-* DallasTemperature by Miles Burton and others
+* WiFi101OTA by Arduino
+* SD by Arduino
+* FreeRTOS_SAMD21 by BriscoeTech
+* I2C_DMAC version by Martin Lindupp
 
 ### Board Setup
 
@@ -156,12 +177,15 @@ Update the ATWINC1500 module by selecting "WiFi101 Firmware Updater".
 
 <img src="meta/WiFi101_Firmware_Updater_2.png" width="605">
 
-Click the "Update Firmware" button.
+Select the latest WINC1501 firmware and click the "Update Firmware" button.
 
 <img src="meta/WiFi101_Firmware_Updater_3.png" width="662">
 
 Finally open the "WiFi_Gate_Controller.ino" sketch downloaded from GitHub. Update the necessary defines for your Wireless network and MQTT server settings see the [Code README](code/README.md) for more information. Now upload it just like the "WiFi101 FirmwareUpdater" example. All done!
 
+This project also supports Visual Studio Code. Visual Studio Code supports building Arduino projects and IntelliSense with code completion. The included settings files support my MacOS environment. Just do a search for "Visual Studio Code Arduino" to see how to install.
+
 ## Acknowledgments
 
 [Arduino](www.arduino.cc) kindly develops open source hardware and software which makes writing software for this board and especially the WiFi module easy.
+[Visual Studio Code](https://code.visualstudio.com/) from Microsoft is a great alternative to the Arduino IDE.

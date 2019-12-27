@@ -45,7 +45,7 @@
 // Enable Low Power Mode on WiFi
 #define ENABLE_WIFI_LOW_POWER
 // enable calibration mode
-#define ENABLE_CALIBRATION_MODE
+//#define ENABLE_CALIBRATION_MODE
 // Current Version
 #define VERSION                   "1.0"
 
@@ -79,6 +79,28 @@ enum Gate_Dir_Enum {GATE_PULL_TO_OPEN = 0, GATE_PUSH_TO_OPEN};
 // this defines which way the linear actuator has to move to open
 //   GATE_PULL_TO_OPEN or GATE_PUSH_TO_OPEN
 #define GATE_DIRECTION            GATE_PULL_TO_OPEN
+// how long (ms) gate remains open before automatically closing
+// range 0 - 90 seconds or 0 - 90,000 milliseconds, default 60,000
+// set to 0 to turn off automatic close
+#define GATE_AUTO_CLOSE           60 * 1000
+// how long (ms) gate is allowed to run without reaching limits.
+// range 5 - 120 seconds or 5,000 - 120,000 milliseconds, default 60,000
+#define GATE_RUN_TIME             60 * 1000
+// how long (ms) lamp is active prior to gate movement
+// default 0, range 0 - 5 seconds or 0 - 5,000 milliseconds
+#define GATE_LAMP_DELAY           0
+// how long (ms) magnetic lock is activated to release lock prior to gate moving
+// default 1000, range 0 - 5 seconds or 0 - 5,000 milliseconds
+#define GATE_LOCK_DELAY           1 * 1000
+// this defines the how long (ms) in over-current before tripping
+// range 0 - 5 seconds of 0 - 5,000 milliseconds
+#define GATE_OC_TRIP_TIME         500
+// this defines the over-current level to trip in time GATE_OC_TRIP_TIME
+// value is in 10mA steps (i.e. 20 amp = 20 * 100 = 2000)
+#define GATE_OC_TRIP_CURRENT      5 * 100
+// this defines the peak over-current to trip instantly
+// value is in 10mA steps (i.e. 20 amp = 20 * 100 = 2000)
+#define GATE_OC_TRIP_PEAK         20 * 100
 
 /******************************************************************
  * Gate Input Type Defines
@@ -151,11 +173,16 @@ enum Gate_Dir_Enum {GATE_PULL_TO_OPEN = 0, GATE_PUSH_TO_OPEN};
 #define PIN_MOTOR_EN              3       // Motor Enable
 #define PIN_MOTOR_EXT_H           1       // Motor Extend High
 #define PIN_MOTOR_EXT_L           PIN_A5  // Motor Extend Low
-#define PIN_MIS                   PIN_A6  // Motor current sense PA07 (A6 on schematic)
+#define PIN_MOTOR_MIS             PIN_A6  // Motor current sense
 
 // STATUS LEDs
 #define STATUS_GREEN_LED          6
 #define STATUS_RED_LED            7
+
+// Force enable serial port if Ccalibration is defined
+#ifdef ENABLE_CALIBRATION_MODE
+#define ENABLE_SERIAL
+#endif
 
 // Logging/Printing defines
 #ifdef ENABLE_SERIAL

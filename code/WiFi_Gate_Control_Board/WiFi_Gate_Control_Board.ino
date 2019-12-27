@@ -16,8 +16,6 @@
     FreeRTOS_SAMD21 version 1.0.0 by BriscoeTech
     MQTT version 2.4.5 by Joel Gaehwiler
     I2C_DMAC version 1.1.8 by Martin Lindupp
-    OneWire version 2.3.5 by Paul Stoffregen and many others
-    DallasTemperature version 3.8.0 by Miles Burton and others
 
   Clock configuration
     XOSC32k is enabled, Arduino startup.c
@@ -63,6 +61,7 @@
 #include "state.h"
 #include "network.h"
 #include "WiFi_Gate_Control_Board.h"
+#include <MemoryFree.h>
 
 /******************************************************************
  * Definitions in arduino_secrets.h
@@ -87,6 +86,7 @@
 TaskHandle_t h_HALTask;
 TaskHandle_t h_NETTask;
 TaskHandle_t h_STATETask;
+TaskHandle_t h_MOTORTask;
 
 /******************************************************************
  * Standard Arduino setup function
@@ -142,9 +142,16 @@ void setup() {
   vSetErrorLed(STATUS_RED_LED, HIGH);
 
   // create tasks
-  xTaskCreate(thread_net, "NET Task", 2048, NULL, tskIDLE_PRIORITY + 1, &h_NETTask);
   xTaskCreate(thread_hal, "HAL Task", 256, NULL, tskIDLE_PRIORITY + 2, &h_HALTask);
+  xTaskCreate(thread_motor, "MOTOR Task", 256, NULL, tskIDLE_PRIORITY + 4, &h_MOTORTask);
+  #ifndef ENABLE_CALIBRATION_MODE
   xTaskCreate(thread_state, "STATE Task", 256, NULL, tskIDLE_PRIORITY + 3, &h_STATETask);
+  xTaskCreate(thread_net, "NET Task", 512, NULL, tskIDLE_PRIORITY + 1, &h_NETTask);
+  #endif
+
+  Log("Heap Remaining: ");
+  Print( freeMemory() );
+  Println(" bytes");
 
   // start the RTOS, this function will never return and will schedule the tasks.
   vTaskStartScheduler();
@@ -156,13 +163,6 @@ void setup() {
  * higher priority and should never yield to this task.
  ******************************************************************/
 void loop() {
-  static uint32_t lastUpdate = 0;
-
-  if (lastUpdate + 1000 < xTaskGetTickCount()) {
-    Print(".");
-    lastUpdate = xTaskGetTickCount();
-  }
-  
 //  yield();
 //  static uint32_t lastTempPublish = 0 - (TEMP_RATE + 10);
 //  static uint8_t lastPushbuttonState = false;
@@ -206,7 +206,7 @@ void loop() {
 //  
 //  // time to publish temperature?
 //  if (xTaskGetTickCount() > lastTempPublish + TEMP_RATE) {
-//    Serial.print("Free RAM = "); Serial.println(freeMemory());
+//    Print("Free RAM = "); Println(freeMemory());
 //    lastTempPublish = xTaskGetTickCount();   // we just published
 //  }
 //
@@ -216,12 +216,27 @@ void loop() {
 }
 
 /******************************************************************
+ * HAL module motor thread function
+ ******************************************************************/
+static void thread_motor(void *pvParameters) {
+  // Initialization of MOTOR is done in setup
+  //Logln("MOTOR Task now running");
+  
+  // Loop forever
+  while (true) {
+    // run HAL Motor loop frequently
+    HAL.motorLoop();
+    // delay a bit before running the motor loop again
+    delayMs(10);
+  }
+}
+
+/******************************************************************
  * State module thread function
  ******************************************************************/
 static void thread_state(void *pvParameters) {
-  Logln("State Task now running");
-  
   // Initialize State Machine
+  //Logln("State Task now running");
   STATE.begin();
 
   // Loop forever
@@ -237,14 +252,14 @@ static void thread_hal(void *pvParameters) {
   TickType_t previousWakeTick = xTaskGetTickCount();
 
   // Initialization of HAL is done in setup
-  Logln("HAL Task now running");
+  //Logln("HAL Task now running");
   
   // Loop forever
   while (true) {
     // run HAL loop frequently
     HAL.loop();
     // we want to run every so often
-    delayMsUntil(&previousWakeTick, 5);
+    delayMsUntil(&previousWakeTick, 2);
   }
 }
 
@@ -252,13 +267,28 @@ static void thread_hal(void *pvParameters) {
  * Network module thread function (lowest priority task)
  ******************************************************************/
 static void thread_net(void *pvParameters) {
-  Logln("Network Task now running");
-  
+  TickType_t freememUpdateTick = xTaskGetTickCount();
+
   // Initialize network
+  //Logln("Network Task now running");
   NET.begin();
 
   // Loop forever
   while (true) {
     NET.loop();
+
+    // display free memory info
+    if (xTaskGetTickCount() - freememUpdateTick > 60000) {
+      freememUpdateTick += 60000;
+      Log("Thread free bytes (NET: ");
+      Print(uxTaskGetStackHighWaterMark( h_NETTask ));
+      Print(", HAL: ");
+      Print(uxTaskGetStackHighWaterMark( h_HALTask ));
+      Print(", STATE: ");
+      Print(uxTaskGetStackHighWaterMark( h_STATETask ));
+      Print(", MOTOR: ");
+      Print(uxTaskGetStackHighWaterMark( h_MOTORTask ));
+      Println(")");
+    }
   }
 }

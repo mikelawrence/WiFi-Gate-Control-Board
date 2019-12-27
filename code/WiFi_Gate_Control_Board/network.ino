@@ -71,7 +71,7 @@ void NetworkClass::begin() {
 
   // Turn on WINC1500 WiFi module and connect to network
   WiFi.begin(SECRET_SSID, SECRET_PASSWORD);
-  Logln("Connecting to WiFi Network");
+  Logln("Connecting to WiFi Network: " SECRET_SSID);
 
   // MQTT setup
   m_mqtt.begin(MQTT_SERVER, MQTT_SERVERPORT, m_net);    // initialize mqtt object
@@ -154,7 +154,7 @@ uint8_t NetworkClass::connect() {
       WiFi.begin(SECRET_SSID, SECRET_PASSWORD);
       // Reconnect in another 15 minutes
       lastDisconnectTime = xTaskGetTickCount();
-      Logln("Reconnecting to WiFi Network");
+      Logln("Reconnecting to WiFi Network: " SECRET_SSID);
     }
     return NET_WIFI_NOT_CONNECTED;                    // return with WiFi not connected
   }

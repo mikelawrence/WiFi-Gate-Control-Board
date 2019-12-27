@@ -1,7 +1,7 @@
 /*
   Input/Output/LED Hardware Abstraction Layer for WiFi Gate Control Board.
 
-  Copyright (c) 2019 Mike Lawrence
+  Copyright (c) 2019 Mike Lawrence 
   
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -27,11 +27,11 @@
 #include "WDTZero.h"
 #include "WiFi_Gate_Control_Board.h"
 
-#define INPUT_COUNT       13                  // Number of inputs for the gate
+#define INPUT_COUNT       13                  // Number of input types for the gate
                                               // Matches number names in IN_Enum enumeration
 #define LED_COUNT         23                  // Number of LEDs connected to LP5024
 
-#define BOARD_IN_COUNT    12                  // Number of inputs on the board
+#define BOARD_IN_COUNT    12                  // Number of generic inputs on the board
 #define DEBOUNCE_COUNT    BOARD_IN_COUNT*2+5  // Number of debounced inputs
 
 /******************************************************************
@@ -110,26 +110,32 @@ enum OUT_State_Enum {OUT_STATE_ON,            // for Power outputs (12V on)
                     
 
 // enumeration of motor directions
-enum MOTOR_Dir_Enum {MOTOR_DIR_OPEN,          // Open Motor direction
-                     MOTOR_DIR_CLOSE};        // Close Motor direction
+enum MOTOR_Dir_Enum {MOTOR_DIR_OPEN,          // open Motor direction
+                     MOTOR_DIR_CLOSE};        // close Motor direction
 
-// enumeration of Status LED colors
-enum STATUS_LED_Enum {STATUS_LED_OFF,         // Status LED is off
-                      STATUS_LED_GOOD,        // Status LED is green
-                      STATUS_LED_ERROR};      // Status LED is red
+// enumeration of status LED colors
+enum STATUS_LED_Enum {STATUS_LED_OFF,         // status LED is off
+                      STATUS_LED_GOOD,        // status LED is green
+                      STATUS_LED_ERROR};      // status LED is red
 
-// enumeration of Motor LED colors
-enum MOTOR_LED_Enum {MOTOR_LED_OFF,           // Motor LED is off
-                     MOTOR_LED_OPENING,       // Motor LED is green
-                     MOTOR_LED_CLOSING};      // Motor LED is red
+// enumeration of motor LED colors
+enum MOTOR_LED_Enum {MOTOR_LED_OFF,           // motor LED is off
+                     MOTOR_LED_OPENING,       // motor LED is green
+                     MOTOR_LED_CLOSING};      // motor LED is red
+
+// enumeration of motor errors
+enum MOTOR_Err_Enum {MOTOR_ERROR_NONE,        // no error occurred
+                     MOTOR_ERROR_TIMEOUT,     // motor took to long to open or close
+                     MOTOR_ERROR_OVERCURRENT};// motor reached over current level
 
 class HalClass {
 public:
   HalClass();
   bool begin(void);                           // initialize everything
-  void loop(void);                            // must be called as schedule task
+  void loop(void);                            // must be called via a FreeRTOS task
+  void motorLoop(void);                       // must be called via a FreeRTOS task
   // input methods
-  uint8_t inputRead(uint8_t input);           // returns the current state of the specified input
+  uint8_t inputGet(uint8_t input);            // returns the current state of the specified input
   // output methods
   void outputSetPower(int output, int state); // turns output's +12V power on/off
   void outputSetRelay(int output, int state); // turns output's relay on/off
@@ -141,9 +147,12 @@ public:
   bool gateIsOpening(void);                   // returns true when gate is opening
   bool gateIsClosing(void);                   // returns true when gate is closing
   bool gateIsStopped(void);                   // returns true when gate is stopped
+  uint8_t gateError(void);                    // returns the motor error status
   void gateOpen(void);                        // starts the process of the opening the gate
   void gateClose(void);                       // starts the process of the closing the gate
   void gateStop(void);                        // stops the gate
+  // task methods
+  void inputSetChangedNotify(TaskHandle_t task); // configures task to notify when input changed
 
 private:
   uint8_t m_ledEnabled;                       // true when LEDs are enabled
@@ -163,6 +172,10 @@ private:
 
   uint8_t m_gateOpening;                      // when true gate is opening
   uint8_t m_gateClosing;                      // when true gate is closing
+
+  TaskHandle_t m_inChangedNotifyTask = NULL;  // task to notify when input changed
+
+  void motorCal(void);                        // called instead of motorloop when calibration is enabled
 };
 
 extern HalClass HAL;

@@ -1,4 +1,4 @@
-/*
+/* 
   Input/Output/LED/Motor Hardware Abstraction Layer for WiFi Gate Control Board.
 
   There are three I2C devices on this board.
@@ -51,17 +51,27 @@
 #include <I2C_DMAC.h>
 #include "hal.h"
 
+// Motor calibration defines (result from ADC will be 0 = 0A and 1500 = 15.0A)
+// copied from results of calibration using electronic load
+#define CAL_EXTEND_OFFSET       584
+#define CAL_EXTEND_GAIN         2503
+#define CAL_RETRACT_OFFSET      583
+#define CAL_RETRACT_GAIN        2406
+
+// I2C addresses
 #define TMP100_ADDR       0x48    // I2C Address for Temperature Sensor
 #define TCA6424_ADDR      0x22    // I2C Address for TCA6424 IO Expander
 #define TCA6408_ADDR      0x20    // I2C Address for TCA6408 IO Expander
 #define LP5024_ADDR       0x28    // I2C Address for LP5024 LED Driver
 
+// special debounce indexes
 #define DEBOUNCE_PB_INDEX           (DEBOUNCE_COUNT-5)
 #define DEBOUNCE_LED_INDEX          (DEBOUNCE_COUNT-4)
 #define DEBOUNCE_OPEN_LIMIT_INDEX   (DEBOUNCE_COUNT-3)
 #define DEBOUNCE_CLOSE_LIMIT_INDEX  (DEBOUNCE_COUNT-2)
 #define DEBOUNCE_12VOUT_FAULT_INDEX (DEBOUNCE_COUNT-1)
 
+// LED PWM values
 #define LED_PWM_ON        0xFF    // Intensity for LED on
 #define LED_PWM_OFF       0x00    // Intensity for LED off
 
@@ -106,11 +116,11 @@ enum LED_Pos_Enum {LED_INPUT2_GREEN = 0,      // Input 2 active red
 #define OUT_POS_RELAY_OUT2_EN   0x40      // Output 2 relay enable position
 
 // maps Motor Current Input Arduino pin to SAM pin info
-#define MIS_SAM_PORT            g_APinDescription[PIN_MIS].ulPort
-#define MIS_SAM_PIN             g_APinDescription[PIN_MIS].ulPin
+#define MIS_SAM_PORT            g_APinDescription[PIN_MOTOR_MIS].ulPort
+#define MIS_SAM_PIN             g_APinDescription[PIN_MOTOR_MIS].ulPin
 #define MIS_SAM_PINMASK         (1ul << MIS_SAM_PIN)
 
-// maps physical input to input type
+// maps physical input to input type (change in WiFi_Gate_Control_Board.h)
 const uint8_t m_inMapping[BOARD_IN_COUNT] = {BOARD_IN1, BOARD_IN2, BOARD_IN3, BOARD_IN4, 
                                              BOARD_IN5, BOARD_IN6, BOARD_IN7, BOARD_IN8, 
                                              BOARD_IN9, BOARD_IN10, BOARD_IN11, BOARD_IN12};
@@ -118,9 +128,9 @@ const uint8_t m_inMapping[BOARD_IN_COUNT] = {BOARD_IN1, BOARD_IN2, BOARD_IN3, BO
 /******************************************************************
  * Local variables not part of HAL class
  ******************************************************************/
-// uint32_t melimCount;
-// uint32_t mrlimCount;
-// these local variables are set bu pin change interrupts
+volatile uint32_t adcSample;              // ADC sample accumulator 
+volatile uint32_t adcSampleCnt;           // ADC sample count
+// these local variables are set by pin change interrupts
 uint8_t dbMelimRead;                      // last read state of motor extend limit
 uint8_t dbMrlimRead;                      // last read state of motor retract limit
 
@@ -220,6 +230,7 @@ bool HalClass::begin() {
   REG_ADC_REFCTRL = ADC_REFCTRL_REFSEL_AREFA;         // select VREFA (PA03 on schematic)
   REG_ADC_CTRLB = ADC_CTRLB_PRESCALER_DIV4 |          // clock divide 4 (8MHz / 4 = 2MHz)
                   ADC_CTRLB_RESSEL_16BIT |            // 16-bit resolution (required for averaging)
+                  ADC_CTRLB_CORREN |                  // enable gain correction
                   ADC_CTRLB_FREERUN;                  // ADC is in free running mode
   while (ADC->STATUS.bit.SYNCBUSY);                   // wait for synchronization
   // digital correction disabled
@@ -230,7 +241,7 @@ bool HalClass::begin() {
                     ADC_AVGCTRL_ADJRES(4);            // right shift average 4 (result is 12-bits)
   REG_ADC_INPUTCTRL = ADC_INPUTCTRL_GAIN_1X |         // No input gain
                       ADC_INPUTCTRL_MUXNEG_IOGND |    // ADC negative input IOGND
-                      ADC_INPUTCTRL_MUXPOS(PIN_MIS);  // ADC positive input MIS pin
+                      ADC_INPUTCTRL_MUXPOS(MIS_SAM_PIN);  // ADC positive input MIS pin
   while (ADC->STATUS.bit.SYNCBUSY);                   // wait for synchronization
 
   // configure the ADC for windowing mode
@@ -315,7 +326,6 @@ bool HalClass::begin() {
   // check for I2C errors
   if (i2cError) {
     Println("Failed");
-    return (false);
   } else {
     Println("Success");
   }
@@ -356,17 +366,18 @@ bool HalClass::begin() {
 }
 
 /******************************************************************
- * Periodically handle network and operations.
+ * Periodically handle devices.
  *   Designed for use with FreeRTOS.
  ******************************************************************/
 void HalClass::loop() {
+  static TickType_t lastUpdate;
   TickType_t currentTick;
   uint32_t curInput;
   uint8_t cur10kError;
   uint8_t tempData[INPUT_COUNT];
   uint8_t i;
   uint8_t newError;
-  static TickType_t lastUpdate;
+  uint8_t inputChanged;
 
   // always reset Watchdog Timer at the beginning of this loop
   WDTZero.reset();
@@ -433,7 +444,11 @@ void HalClass::loop() {
 
   // set LED PWM values to OFF (not including Motor and Halt)
   for (i = 0; i < LED_COUNT - 2; i++) {
-    m_ledPwmValue[i] = LED_PWM_OFF;
+    if ((i != LED_MOTOR_GREEN) && 
+        (i != LED_MOTOR_RED) &&
+        (i != LED_HALT)) {
+      m_ledPwmValue[i] = LED_PWM_OFF;
+    }
   }
 
   // update open limit input and LEDs
@@ -681,20 +696,25 @@ void HalClass::loop() {
     }
   }
 
-  // update gate input current and last states
+  taskENTER_CRITICAL();
+  // update gate input current and last states, also handle input changed
+  inputChanged = false;
   for (i = 0; i < INPUT_COUNT; i++) {
     m_inLastState[i] = m_inState[i];
     // current state is updated all at once here due to scheduler task switching
     m_inState[i] = tempData[i];
-  }
-
-  // handle input changed
-  for (i = 0; i < INPUT_COUNT; i++) {
     if (m_inLastState[i] != m_inState[i]) {
       // input changed
+      inputChanged = true;
+    }
+  }
+  taskEXIT_CRITICAL();
 
-      // no need to look for further changes
-      break;
+  // notify tasks waiting for input changed
+  if (inputChanged) {
+    if (m_inChangedNotifyTask != NULL) {
+      // we have a task to notify of input changed
+      xTaskNotifyGive(m_inChangedNotifyTask);
     }
   }
 
@@ -709,10 +729,6 @@ void HalClass::loop() {
   } if (newError > ERR.getError()) {
     // out error is a higher priority error
     ERR.setError(newError);
-  }
-
-  if WAS_PRESSED(DEBOUNCE_PB_INDEX) {
-    Logln("Pushbutton pressed");
   }
   
   // time to change LEDs enabled state?
@@ -794,9 +810,132 @@ void HalClass::loop() {
 }
 
 /******************************************************************
+ * Periodically handle the motor.
+ *   Designed for use with FreeRTOS.
+ ******************************************************************/
+void HalClass::motorLoop(void) {
+  TickType_t currentTick;
+  uint32_t retracting;
+
+  // switch to calibration mode?
+  #ifdef ENABLE_CALIBRATION_MODE
+  motorCal();
+  return;
+  #endif
+
+  // motor is doing nothing, check for time to do something
+  if (!m_gateOpening && !m_gateClosing) {
+    // nothing to do
+    return;
+  }
+  // check for time to open and gate is already open all the way
+  if (m_gateOpening && m_inState[IN_OPEN_LIMIT] == IN_STATE_ACTIVE) {
+    // cannot open an already open gate
+    Logln("Cannot open an already open gate.");
+    m_gateOpening = false;
+    m_gateClosing = false;
+    return;
+  }
+  // check for time to close and gate is already closed
+  if (m_gateClosing && m_inState[IN_CLOSE_LIMIT] == IN_STATE_ACTIVE) {
+    // cannot close an already closed gate
+    Logln("Cannot close an already closed gate.");
+    m_gateOpening = false;
+    m_gateClosing = false;
+    return;
+  }
+
+  if (m_gateOpening) {
+    // we are opening the gate
+    Logln("Starting Gate Open");
+    ledSetMotor(MOTOR_LED_OPENING);             // set motor LED color to opening
+    if (GATE_DIRECTION == GATE_PULL_TO_OPEN) {
+      retracting = true;                        // gate retracts to open
+    } else {
+      retracting = false;                       // gate extends to open
+    }
+  } else if (m_gateClosing) {
+    // we are closing the gate
+    Logln("Starting Gate Close");
+    ledSetMotor(MOTOR_LED_CLOSING);             // set motor LED color to closing
+    if (GATE_DIRECTION == GATE_PULL_TO_OPEN) {
+      retracting = false;                       // gate extends to close
+    } else {
+      retracting = true;                        // gate retracts to close
+    }
+  }
+
+  // // time to sample motor sense current offset and configure ADC calibration
+  // // enable half-bridges and set both to lowside active
+  // // this prevents the motor from moving but still activates motor current sense
+  // // which is necessary to measure it's offset
+  // digitalWrite(PIN_MOTOR_EXT_H, HIGH);          // set to extend
+  // digitalWrite(PIN_MOTOR_EXT_L, LOW);
+  // digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  // adcSample = 0;                                // accumulations starts at zero
+  // adcSampleCnt = 0;                             // 0 sample cout mean interrupt will ignore samples
+  // REG_ADC_GAINCORR = 2048;                      // no gain correction
+  // REG_ADC_OFFSETCORR = 0;                       // no offset correction
+  // REG_ADC_CTRLA = ADC_CTRLA_ENABLE;             // enable ADC
+  // while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  // REG_ADC_INTENSET = ADC_INTENSET_RESRDY;       // enable ADC result ready interrupt
+  // while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  // delayMs(10);                                  // let the offset current stabilize
+  // adcSampleCnt = 1000;                            // prep # of samples in accumulation
+  // while (adcSampleCnt != 0)
+  //   delayMs(1);                                 // wait unitl all samples are accumulated
+  // adcSampleExtend = adcSample / 1000;             // complete ADC sample average
+  // Log("Offset Correction Extend: ");
+  // Println(adcSampleExtend);
+  // digitalWrite(PIN_MOTOR_EXT_H, LOW);
+  // delayMs(10);                                  // let the offset current stabilize
+  // digitalWrite(PIN_MOTOR_EXT_L, HIGH);          // set both to retract
+  // digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  // delayMs(10);                                  // let the offset current stabilize
+  // adcSample = 0;                                // accumulations starts at zero
+  // adcSampleCnt = 1000;                            // prep # of samples in accumulation
+  // while (adcSampleCnt != 0)
+  //   delayMs(1);                                 // wait unitl all samples are accumulated
+  // adcSampleRetract = adcSample / 1000;            // complete ADC sample average
+  // Log("Offset Correction Retract: ");
+  // Println(adcSampleRetract);
+  // // REG_ADC_OFFSETCORR = adcSample;               // correct for current offset
+  
+  // time to move the gate
+  REG_ADC_CTRLA = ADC_CTRLA_ENABLE;             // enable ADC
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  REG_ADC_INTENSET = ADC_INTENSET_RESRDY;       // enable ADC result ready interrupt
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  delayMs(3);                                   // ignore the first few ADC samples
+  if (retracting) {
+    // we are retracting the gate
+    REG_ADC_OFFSETCORR = CAL_RETRACT_OFFSET;    // use extend offset correction
+    REG_ADC_GAINCORR = CAL_RETRACT_GAIN;        // use extend gain correction
+    digitalWrite(PIN_MOTOR_EXT_L, HIGH);        // set motor to retract
+    digitalWrite(PIN_MOTOR_EXT_H, LOW);
+  } else {
+    // we are extending the gate
+    REG_ADC_OFFSETCORR = CAL_EXTEND_OFFSET;     // use extend offset correction
+    REG_ADC_GAINCORR = CAL_EXTEND_GAIN;         // use extend gain correction
+    digitalWrite(PIN_MOTOR_EXT_L, LOW);         // set motor to extend
+    digitalWrite(PIN_MOTOR_EXT_H, HIGH);
+  }
+
+  REG_ADC_INTENCLR = ADC_INTENCLR_RESRDY;       // disable ADC result ready interrupt
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  REG_ADC_CTRLA = 0;                            // disable ADC
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+
+  ledSetMotor(MOTOR_LED_OFF);                   // set motor LED off
+  m_gateOpening = false;
+  m_gateClosing = false;
+  digitalWrite(PIN_MOTOR_EN, LOW);
+}
+
+/******************************************************************
    Read current input
  ******************************************************************/
-uint8_t HalClass::inputRead(uint8_t input) {
+uint8_t HalClass::inputGet(uint8_t input) {
   return m_inState[input];
 }
 
@@ -928,62 +1067,268 @@ bool HalClass::gateIsClosing(void) {
  * Returns true when gate is stopped
  ******************************************************************/
 bool HalClass::gateIsStopped(void) {
-  return !m_gateOpening && !m_gateClosing;
+  bool result;
+  taskENTER_CRITICAL();
+  result = !m_gateOpening && !m_gateClosing;
+  taskEXIT_CRITICAL();
+  return result;
 }
 
 /******************************************************************
  * starts the process of the opening the gate
  ******************************************************************/
 void HalClass::gateOpen(void) {
+  taskENTER_CRITICAL();
   m_gateOpening = true;
   m_gateClosing = false;
-  ledSetMotor(MOTOR_LED_OPENING);               // Set motor LED color
-  if (GATE_DIRECTION == GATE_PULL_TO_OPEN) {
-    // gate retracts to open
-    digitalWrite(PIN_MOTOR_EXT_H, LOW);
-    digitalWrite(PIN_MOTOR_EXT_L, HIGH);
-  } else {
-    // gate extends to open
-    digitalWrite(PIN_MOTOR_EXT_H, HIGH);
-    digitalWrite(PIN_MOTOR_EXT_L, LOW);
-  }
-  digitalWrite(PIN_MOTOR_EN, HIGH);             // Motor is now running
+  taskEXIT_CRITICAL();
 }
 
 /******************************************************************
  * starts the process of the closing the gate
  ******************************************************************/
 void HalClass::gateClose(void) {
+  taskENTER_CRITICAL();
   m_gateOpening = false;
   m_gateClosing = true;
-  ledSetMotor(MOTOR_LED_CLOSING);               // Set motor LED color
-  if (GATE_DIRECTION == GATE_PULL_TO_OPEN) {
-    // gate extends to close
-    digitalWrite(PIN_MOTOR_EXT_H, HIGH);
-    digitalWrite(PIN_MOTOR_EXT_L, LOW);
-  } else {
-    // gate retracts to close
-    digitalWrite(PIN_MOTOR_EXT_H, LOW);
-    digitalWrite(PIN_MOTOR_EXT_L, HIGH);
-  }
-  digitalWrite(PIN_MOTOR_EN, HIGH);             // Motor is now running
+  taskEXIT_CRITICAL();
 }
 
 /******************************************************************
  * Stops the gate
  ******************************************************************/
 void HalClass::gateStop(void) {
+  taskENTER_CRITICAL();
   m_gateOpening = false;
   m_gateClosing = false;
   ledSetMotor(MOTOR_LED_OFF);                   // Set motor LED color
-  digitalWrite(PIN_MOTOR_EN, LOW);             // Motor is now off
+  digitalWrite(PIN_MOTOR_EN, LOW);              // Motor is now off
   digitalWrite(PIN_MOTOR_EXT_H, LOW);
   digitalWrite(PIN_MOTOR_EXT_L, LOW);
+  taskEXIT_CRITICAL();
+}
+
+/******************************************************************
+ * Configure the task to notify when the input has changed.
+ * If set to NULL no task will be notified
+ ******************************************************************/
+void HalClass::inputSetChangedNotify(TaskHandle_t task) {
+  m_inChangedNotifyTask = task;
 }
 
 /******************************************************************
  * Private Methods
  ******************************************************************/
+/******************************************************************
+ * When built with ENABLE_CALIBRATION_MODE defined this function 
+ *   is called instead of motorLoop(). Serial interface will 
+ *   automatically be enabled because it is needed for prompting 
+ *   the user throughout the calibration process.
+ ******************************************************************/
+void HalClass::motorCal(void) {
+  uint8_t lastPBState, newPBState;
+  uint32_t adcExtendOffset, adcRetractOffset, 
+           adcExtendSample, adcRetractSample, 
+           adcExtendGain, adcRetractGain,
+           result;
+  
+  ERR.setError(ERROR_NONE);
+  HAL.inputSetChangedNotify(xTaskGetCurrentTaskHandle());
+
+  // Sample motor extend sense current offset
+  Println("");
+  Logln("Entering Calibration");
+  Logln("Measure Motor offset current");
+  Logln("  We are going to measure the no-load offset current.");
+  Logln("  Connect electronic load to motor output and set Constant Current mode at 0 amps.");
+  Logln("  Note this test will apply motor control in both directions. Make sure the");
+  Logln("  electronic load is connected through a full-wave bridge rectifier.")
+  Logln("Press OPEN/CLOSE button to continue...");
+
+  // wait for OPEN/CLOSE button to be pressed
+  lastPBState = HAL.inputGet(IN_PUSHBUTTON);
+  while (true) {
+    result = ulTaskNotifyTake(pdTRUE, 10);
+    if (result == 1) {
+      // input has changed
+      newPBState = HAL.inputGet(IN_PUSHBUTTON);
+      if ((lastPBState == IN_STATE_INACTIVE) && (newPBState == IN_STATE_ACTIVE)) {
+        // pushbutton pressed
+        break;
+      }
+    }
+  }
+
+  Log("Measuring extend offset current...");
+  digitalWrite(PIN_MOTOR_EXT_H, HIGH);          // set motor to extend
+  digitalWrite(PIN_MOTOR_EXT_L, LOW);
+  digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  ledSetMotor(MOTOR_LED_CLOSING);
+  adcSampleCnt = 0;                             // 0 sample cout mean interrupt will ignore samples
+  REG_ADC_GAINCORR = 2048;                      // no gain correction
+  REG_ADC_OFFSETCORR = 0;                       // no offset correction
+  REG_ADC_CTRLA = ADC_CTRLA_ENABLE;             // enable ADC
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  REG_ADC_INTENSET = ADC_INTENSET_RESRDY;       // enable ADC result ready interrupt
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  delayMs(500);                                 // let the offset current stabilize
+  adcSample = 0;                                // accumulations starts at zero
+  adcSampleCnt = 1000;                          // prep # of samples in accumulation
+  while (adcSampleCnt != 0)
+    delayMs(1);                                 // wait until all samples are accumulated
+  adcExtendOffset = adcSample / 1000;           // complete ADC sample average
+  Println(adcExtendOffset);
+  Log("Measuring retract offset current...");
+  digitalWrite(PIN_MOTOR_EN, LOW);              // disable motor
+  digitalWrite(PIN_MOTOR_EXT_H, LOW);           // set motor to retract
+  digitalWrite(PIN_MOTOR_EXT_L, HIGH);
+  digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  ledSetMotor(MOTOR_LED_OPENING);
+  delayMs(500);                                 // let the offset current stabilize
+  adcSample = 0;                                // accumulations starts at zero
+  adcSampleCnt = 1000;                          // prep # of samples in accumulation
+  while (adcSampleCnt != 0)
+    delayMs(1);                                 // wait until all samples are accumulated
+  adcRetractOffset = adcSample / 1000;          // complete ADC sample average
+  Println(adcRetractOffset);
+
+  digitalWrite(PIN_MOTOR_EN, LOW);              // disable motor
+  ledSetMotor(MOTOR_LED_OFF);                   // set motor LED off
+  delayMs(100);
+  
+  Println("");
+  Logln("Measure Motor 15 amp load current.")
+  Logln("  We are going to measure the full-load current.");
+  Logln("  Set Electronic Load to Constant Current mode at 15 amps.");
+  Logln("  Again this test will apply motor control in both directions.")
+  Logln("Press OPEN/CLOSE button to continue...");
+
+  // wait for OPEN/CLOSE button to be pressed
+  lastPBState = HAL.inputGet(IN_PUSHBUTTON);
+  while (true) {
+    result = ulTaskNotifyTake(pdTRUE, 10);
+    if (result == 1) {
+      // input has changed
+      newPBState = HAL.inputGet(IN_PUSHBUTTON);
+      if ((lastPBState == IN_STATE_INACTIVE) && (newPBState == IN_STATE_ACTIVE)) {
+        // pushbutton pressed
+        break;
+      }
+    }
+  }
+
+  Log("Measuring extend 15 amp current...");
+  digitalWrite(PIN_MOTOR_EXT_H, HIGH);          // set motor to extend
+  digitalWrite(PIN_MOTOR_EXT_L, LOW);
+  digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  ledSetMotor(MOTOR_LED_CLOSING);
+  delayMs(500);                                 // let the offset current stabilize
+  adcSample = 0;                                // accumulations starts at zero
+  adcSampleCnt = 1000;                          // prep # of samples in accumulation
+  while (adcSampleCnt != 0)
+    delayMs(1);                                 // wait until all samples are accumulated
+  adcExtendSample = adcSample / 1000;           // complete ADC sample average
+  Println(adcExtendSample);
+  Log("Measuring retract 15 amp current...");
+  digitalWrite(PIN_MOTOR_EN, LOW);              // disable motor
+  digitalWrite(PIN_MOTOR_EXT_H, LOW);           // set motor to retract
+  digitalWrite(PIN_MOTOR_EXT_L, HIGH);
+  digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  ledSetMotor(MOTOR_LED_OPENING);
+  delayMs(500);                                 // let the offset current stabilize
+  adcSample = 0;                                // accumulations starts at zero
+  adcSampleCnt = 1000;                          // prep # of samples in accumulation
+  while (adcSampleCnt != 0)
+    delayMs(1);                                 // wait until all samples are accumulated
+  adcRetractSample = adcSample / 1000;          // complete ADC sample average
+  Println(adcRetractSample);
+ 
+  // turn motor off
+  digitalWrite(PIN_MOTOR_EN, LOW);              // disable motor
+  ledSetMotor(MOTOR_LED_OFF);                   // set motor LED off
+  delayMs(100);
+
+  // compute calibration values
+  adcExtendGain = 2048 * 1500 / (adcExtendSample - adcExtendOffset);
+  adcRetractGain = 2048 * 1500 / (adcRetractSample - adcRetractOffset);
+  // add device specific temperature and aging factor
+  adcExtendGain = (uint32_t) (1.006 * (double) adcExtendGain);
+  adcRetractGain = (uint32_t) (1.006 * (double) adcRetractGain);
+  Logln("Add the following 4 lines to the top of hal.ino file.")
+  Print("#define CAL_EXTEND_OFFSET       "); Println(adcExtendOffset);
+  Print("#define CAL_EXTEND_GAIN         "); Println(adcExtendGain);
+  Print("#define CAL_RETRACT_OFFSET      "); Println(adcRetractOffset);
+  Print("#define CAL_RETRACT_GAIN        "); Println(adcRetractGain);
+
+  // Println("");
+  // Logln("Measure Motor 30 amp load current.")
+  // Logln("  We are going to measure the 30 amp current.");
+  // Logln("  Set Electronic Load to Constant Current mode at 30 amps.");
+  // Logln("  Again this test will apply motor control in both directions.")
+  // Logln("Press OPEN/CLOSE button to continue...");
+
+  // // wait for OPEN/CLOSE button to be pressed
+  // lastPBState = HAL.inputGet(IN_PUSHBUTTON);
+  // while (true) {
+  //   result = ulTaskNotifyTake(pdTRUE, 10);
+  //   if (result == 1) {
+  //     // input has changed
+  //     newPBState = HAL.inputGet(IN_PUSHBUTTON);
+  //     if ((lastPBState == IN_STATE_INACTIVE) && (newPBState == IN_STATE_ACTIVE)) {
+  //       // pushbutton pressed
+  //       break;
+  //     }
+  //   }
+  // }
+
+  // Log("Measuring extend 15 amp current...");
+  // REG_ADC_OFFSETCORR = adcExtendOffset;         // extend offset correction
+  // REG_ADC_GAINCORR = adcExtendGain;             // extend gain correction
+  // digitalWrite(PIN_MOTOR_EXT_H, HIGH);          // set motor to extend
+  // digitalWrite(PIN_MOTOR_EXT_L, LOW);
+  // digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  // ledSetMotor(MOTOR_LED_CLOSING);
+  // delayMs(500);                                  // let the offset current stabilize
+  // adcSample = 0;                                // accumulations starts at zero
+  // adcSampleCnt = 1000;                          // prep # of samples in accumulation
+  // while (adcSampleCnt != 0)
+  //   delayMs(1);                                 // wait until all samples are accumulated
+  // Println(adcSample / 1000);
+  // Log("Measuring retract 15 amp current...");
+  // REG_ADC_OFFSETCORR = adcRetractOffset;        // retract offset correction
+  // REG_ADC_GAINCORR = adcRetractGain;            // retract gain correction
+  // digitalWrite(PIN_MOTOR_EN, LOW);              // disable motor
+  // digitalWrite(PIN_MOTOR_EXT_H, LOW);           // set motor to retract
+  // digitalWrite(PIN_MOTOR_EXT_L, HIGH);
+  // digitalWrite(PIN_MOTOR_EN, HIGH);             // enable motor for offset measurement
+  // ledSetMotor(MOTOR_LED_OPENING);
+  // delayMs(500);                                  // let the offset current stabilize
+  // adcSample = 0;                                // accumulations starts at zero
+  // adcSampleCnt = 1000;                          // prep # of samples in accumulation
+  // while (adcSampleCnt != 0)
+  //   delayMs(1);                                 // wait until all samples are accumulated
+  // Println(adcSample / 1000);
+
+  // // turn motor off
+  // digitalWrite(PIN_MOTOR_EN, LOW);              // disable motor
+  // ledSetMotor(MOTOR_LED_OFF);                   // set motor LED off
+  // delayMs(100);
+
+  Println("");
+  Logln("Calibration is complete.");
+  Logln("This application has stopped and will no longer function.");
+  Logln("Rebuild application without calibration enabled to operate normally.");
+  
+  // We are done with the ADC
+  REG_ADC_INTENCLR = ADC_INTENCLR_RESRDY;       // disable ADC result ready interrupt
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+  REG_ADC_CTRLA = 0;                            // disable ADC
+  while (ADC->STATUS.bit.SYNCBUSY);             // wait for synchronization
+
+  while(true) {
+    WDTZero.reset();
+  }
+}
 
 /******************************************************************
  * Interrupt Handlers
@@ -996,21 +1341,17 @@ void HalClass::gateStop(void) {
  * interrupts that call this interrupt handler.
  ******************************************************************/
 void ADC_Handler() {
+  uint32_t result;
   if (REG_ADC_INTFLAG & ADC_INTFLAG_WINMON) {
     // this was a window monitor interrupt
   } else {
     // this was a result ready interrupt
-    // calSample += REG_ADC_RESULT;                // add last result to accumulator
-    // calSampleCnt++;
-    // if (calSampleCnt >= 49) {                  // 1 second = 977
-    //   // we are done with the calibration sample
-    //   calSample = calSample / calSampleCnt;     // compute average
-    //   calSampleInProgress = false;              // calibration sample is now done
-      REG_ADC_INTENCLR = ADC_INTENCLR_RESRDY;   // disable ADC result ready interrupt
-      while (ADC->STATUS.bit.SYNCBUSY);         // wait for synchronization
-      REG_ADC_CTRLA = 0;                        // disable ADC
-      while (ADC->STATUS.bit.SYNCBUSY);         // wait for synchronization
-    // }
+    result = REG_ADC_RESULT;                    // read the last result
+    if (adcSampleCnt > 0) {
+      // update accumulation only if there are more samples to add
+      adcSample += result;                      // add last result to accumulator
+      adcSampleCnt--;                           // one more sample added to average
+    }
   }
 }
 

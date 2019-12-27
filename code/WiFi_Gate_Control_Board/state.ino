@@ -1,5 +1,5 @@
 /*
-  State Machine module for WiFi Gate Control Board.
+  State Machine module for WiFi Gate Control Board. 
 
   Copyright (c) 2019 Mike Lawrence
 
@@ -27,59 +27,10 @@
 /******************************************************************
  * Local variables
  ******************************************************************/
-volatile uint32_t calSample;
-volatile uint32_t calSampleCnt;
-volatile uint8_t calSampleInProgress;
 
 /******************************************************************
  * Public Methods
  ******************************************************************/
-
-// /******************************************************************
-//  * Prepares the motor module to open the motor
-//  ******************************************************************/
-// void State::motorOpen(void) {
-//   taskENTER_CRITICAL();
-// //  m_MotorOpen = true;
-// //  m_MotorClose = false;
-//   taskEXIT_CRITICAL();
-// }
-
-// /******************************************************************
-//  * Prepares the motor module to close the motor
-//  ******************************************************************/
-// void State::motorClose(void) {
-//   taskENTER_CRITICAL();
-// //  m_MotorOpen = false;
-// //  m_MotorClose = true;
-//   taskEXIT_CRITICAL();
-// }
-
-// /******************************************************************
-//  * Prepares the motor module to stop the motor
-//  ******************************************************************/
-// void State::motorStop(void) {
-//   taskENTER_CRITICAL();
-// //  m_MotorOpen = true;
-// //  m_MotorClose = false;
-//   taskEXIT_CRITICAL();
-// }
-
-// /******************************************************************
-//  * Kicks off an interrupt based calibration sample average.
-//  * Interrupt will average 100 ADC sample results.
-//  * ADC is already set to a 1024 average so the average will take 
-//  * 1.024 seconds and will comprise 102,400 samples.
-//  ******************************************************************/
-// void State::calSampleStart(void) {
-//   calSample = 0;                              // accumulations starts at zero
-//   calSampleCnt = 0;                           // no samples yet
-//   calSampleInProgress = true;                 // calibration sample is now in progress
-//   REG_ADC_INTENSET = ADC_INTENSET_RESRDY;     // enable ADC result ready interrupt
-//   while (ADC->STATUS.bit.SYNCBUSY);           // wait for synchronization
-//   REG_ADC_CTRLA = ADC_CTRLA_ENABLE;           // enable ADC
-//   while (ADC->STATUS.bit.SYNCBUSY);           // wait for synchronization
-// }
 
 /******************************************************************
  * Initialize State Machine class
@@ -87,6 +38,8 @@ volatile uint8_t calSampleInProgress;
 void StateClass::begin() {
   uint32_t temp;
 
+  // we want this task to be notified when the input has changed
+  HAL.inputSetChangedNotify(xTaskGetCurrentTaskHandle());
  }
 
 /******************************************************************
@@ -94,31 +47,27 @@ void StateClass::begin() {
  *   Designed for use with FreeRTOS.
  ******************************************************************/
 void StateClass::loop(void) {
-  delayMs(100);
-//  if (dir == MOTOR_DIR_OPEN) {
-//    // open the gate
-//    #if GATE_DIRECTION == GATE_PUSH_TO_OPEN
-//    // Motor should extend to open
-//    digitalWrite(PIN_MOTOR_EXT_H, HIGH);
-//    digitalWrite(PIN_MOTOR_EXT_L, LOW);
-//    #else
-//    // Motor should retract to open
-//    digitalWrite(PIN_MOTOR_EXT_H, LOW);
-//    digitalWrite(PIN_MOTOR_EXT_L, HIGH);
-//    #endif
-//  } else {
-//    // close the gate
-//    #if GATE_DIRECTION == GATE_PUSH_TO_OPEN
-//    // Motor should retract to close
-//    digitalWrite(PIN_MOTOR_EXT_H, LOW);
-//    digitalWrite(PIN_MOTOR_EXT_L, HIGH);
-//    #else
-//    // Motor should extend to close
-//    digitalWrite(PIN_MOTOR_EXT_H, HIGH);
-//    digitalWrite(PIN_MOTOR_EXT_L, LOW);
-//    #endif
-//  }
-//  digitalWrite(PIN_MOTOR_EN, HIGH);           // Motor is ON
+  static uint8_t lastPBState = HAL.inputGet(IN_PUSHBUTTON);
+  uint8_t newPBState;
+  static uint8_t evenOdd = false;
+  uint32_t result;
+
+  // wait for input changed notificaton
+  result = ulTaskNotifyTake(pdTRUE, 10);
+  if (result == 1) {
+    // input has changed
+    newPBState = HAL.inputGet(IN_PUSHBUTTON);
+    if ((lastPBState == IN_STATE_INACTIVE) && (newPBState == IN_STATE_ACTIVE)) {
+      if (evenOdd) {
+        HAL.gateOpen();
+      } else {
+        HAL.gateClose();
+      }
+      evenOdd = !evenOdd;
+    }
+    lastPBState = newPBState;
+  }
+
 }
 
 /******************************************************************

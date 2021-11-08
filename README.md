@@ -4,7 +4,7 @@ This board performs the same functions as my [WiFi Gate Controller](https://gith
 
 This PCB design uses my custom libraries available here [Mike's KiCad Libraries](https://github.com/mikelawrence/KiCad-Libraries).
 
-This PCB was designed with [KiCad 5.1.4](http://kicad-pcb.org).
+This PCB was designed with [KiCad 5.1.4](http://kicad.org).
 
 _Note: Multiple ICs and Modules have exposed pads on the bottom which requires either a reflow oven or hot air to solder properly._
 
